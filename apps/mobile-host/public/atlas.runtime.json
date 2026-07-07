@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "1",
+  "hostId": "mobile-host",
+  "catalogUrl": "http://localhost:4400/hosts/mobile-host/catalog.json",
+  "requireIntegrity": true,
+  "allowRuntimeOverrides": true,
+  "requestTimeoutMs": 10000,
+  "retryAttempts": 2,
+  "retryDelayMs": 250,
+  "loadTimeoutMs": 15000,
+  "waitForMfReady": true,
+  "loadingIndicator": "spinner"
+}
