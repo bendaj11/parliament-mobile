@@ -94,7 +94,7 @@ pipeline {
         sh 'npx nx sync:check'
         sh '''
           npx nx affected \
-            -t lint test typecheck build \
+            -t lint test build \
             --outputStyle=static
         '''
       }

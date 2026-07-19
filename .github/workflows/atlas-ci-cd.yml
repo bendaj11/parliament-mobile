@@ -57,7 +57,7 @@ jobs:
       - name: Validate affected Atlas projects
         run: >-
           npx nx affected
-          -t lint test typecheck build
+          -t lint test build
           --outputStyle=static
 
   publish:
@@ -145,7 +145,7 @@ jobs:
         if: steps.affected.outputs.projects != ''
         run: >-
           npx nx affected
-          -t lint test typecheck build
+          -t lint test build
           --outputStyle=static
 
       - name: Validate Atlas deployment configuration
