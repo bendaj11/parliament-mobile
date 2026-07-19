@@ -1,5 +1,5 @@
 {
-  "name": "@org/source",
+  "name": "@parliament/monorepo",
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {},
@@ -81,5 +81,8 @@
     "rxjs": "~7.8.0",
     "tailwindcss": "^4.3.2",
     "zone.js": "^0.15.0"
+  },
+  "overrides": {
+    "@noble/hashes": "^2.2.0"
   }
 }
