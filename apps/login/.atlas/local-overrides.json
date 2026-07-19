@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "1",
+  "hostId": "63f23aaa-ad0a-4a6a-ad2d-0feb6354ee8d",
+  "overrides": [
+    {
+      "appId": "b793d518-ee46-43cb-a57c-e0bcf85043c9",
+      "manifest": {
+        "schemaVersion": "1",
+        "kind": "app",
+        "id": "b793d518-ee46-43cb-a57c-e0bcf85043c9",
+        "name": "Login",
+        "version": "0.0.0",
+        "buildId": "0.0.0-e1f779458c05",
+        "channel": "local",
+        "framework": "angular",
+        "isolation": "scoped",
+        "remoteEntryUrl": "http://localhost:4201/remoteEntry.json",
+        "exposes": {
+          "entry": "./entry"
+        },
+        "requiredHostSdkVersion": "^0.1.0",
+        "supportedHosts": [
+          "7ee210f9-dacd-4aac-939e-237032d44740",
+          "63f23aaa-ad0a-4a6a-ad2d-0feb6354ee8d"
+        ],
+        "placements": [
+          {
+            "id": "7ee210f9-dacd-4aac-939e-237032d44740-login-route",
+            "kind": "route",
+            "hostId": "7ee210f9-dacd-4aac-939e-237032d44740",
+            "route": {
+              "basePath": "/login",
+              "title": "Login",
+              "nav": {
+                "label": "Login",
+                "visible": true
+              }
+            }
+          },
+          {
+            "id": "63f23aaa-ad0a-4a6a-ad2d-0feb6354ee8d-login-route",
+            "kind": "route",
+            "hostId": "63f23aaa-ad0a-4a6a-ad2d-0feb6354ee8d",
+            "route": {
+              "basePath": "/login",
+              "title": "Login",
+              "nav": {
+                "label": "Login",
+                "visible": true
+              }
+            }
+          }
+        ],
+        "createdAt": "2026-07-15T11:50:39.254Z",
+        "styles": [
+          {
+            "href": "http://localhost:4201/styles.css"
+          }
+        ]
+      },
+      "reason": "local"
+    }
+  ],
+  "generatedAt": "2026-07-15T11:50:39.257Z"
+}

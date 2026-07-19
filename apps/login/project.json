@@ -1,0 +1,137 @@
+{
+  "name": "login",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "app",
+  "sourceRoot": "apps/login/src",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@angular-architects/native-federation:build",
+      "options": {
+        "target": "login:esbuild:production"
+      },
+      "configurations": {
+        "development": {
+          "target": "login:esbuild:development",
+          "dev": true
+        }
+      }
+    },
+    "serve": {
+      "executor": "@angular-architects/native-federation:build",
+      "options": {
+        "target": "login:serve-original:development",
+        "dev": true,
+        "port": 4201
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "apps/login/jest.config.cts",
+        "tsConfig": "apps/login/tsconfig.spec.json"
+      }
+    },
+    "serve-static": {
+      "continuous": true,
+      "executor": "@nx/web:file-server",
+      "options": {
+        "buildTarget": "login:build",
+        "port": 4201,
+        "staticFilePath": "dist/apps/login/browser",
+        "spa": true
+      }
+    },
+    "esbuild": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "outputPath": "dist/apps/login",
+        "browser": "apps/login/src/main.ts",
+        "tsConfig": "apps/login/tsconfig.app.json",
+        "inlineStyleLanguage": "less",
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "apps/login/public"
+          }
+        ],
+        "styles": ["apps/login/src/styles.less"],
+        "polyfills": ["es-module-shims"]
+      },
+      "configurations": {
+        "production": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "500kb",
+              "maximumError": "1mb"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "4kb",
+              "maximumError": "8kb"
+            }
+          ],
+          "outputHashing": "all"
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true
+        }
+      }
+    },
+    "serve-original": {
+      "continuous": true,
+      "executor": "@angular/build:dev-server",
+      "defaultConfiguration": "development",
+      "options": {
+        "port": 4201
+      },
+      "configurations": {
+        "production": {
+          "buildTarget": "login:esbuild:production"
+        },
+        "development": {
+          "buildTarget": "login:esbuild:development"
+        }
+      }
+    },
+    "atlas:config": {
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/.atlas"],
+      "options": {
+        "command": "atlas compile-config login"
+      }
+    },
+    "atlas:publish": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "dependsOn": ["build", "atlas:config"],
+      "options": {
+        "command": "atlas publish login --from-build-output"
+      }
+    },
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "atlas dev login",
+        "forwardAllArgs": true
+      }
+    },
+    "login": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "nx run login:dev",
+        "forwardAllArgs": true
+      }
+    }
+  }
+}

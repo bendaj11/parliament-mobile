@@ -1,0 +1,145 @@
+{
+  "name": "angular-host",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "app",
+  "sourceRoot": "apps/angular-host/src",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@angular-architects/native-federation:build",
+      "options": {
+        "target": "angular-host:esbuild:production"
+      },
+      "configurations": {
+        "development": {
+          "target": "angular-host:esbuild:development",
+          "dev": true
+        }
+      }
+    },
+    "serve": {
+      "executor": "@angular-architects/native-federation:build",
+      "options": {
+        "target": "angular-host:serve-original:development",
+        "dev": true,
+        "port": 4200
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "apps/angular-host/jest.config.cts",
+        "tsConfig": "apps/angular-host/tsconfig.spec.json"
+      }
+    },
+    "serve-static": {
+      "continuous": true,
+      "executor": "@nx/web:file-server",
+      "options": {
+        "buildTarget": "angular-host:build",
+        "port": 4200,
+        "staticFilePath": "dist/apps/angular-host/browser",
+        "spa": true
+      }
+    },
+    "esbuild": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "outputPath": "dist/apps/angular-host",
+        "browser": "apps/angular-host/src/main.ts",
+        "tsConfig": "apps/angular-host/tsconfig.app.json",
+        "inlineStyleLanguage": "less",
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "apps/angular-host/public"
+          }
+        ],
+        "styles": ["apps/angular-host/src/styles.less"],
+        "polyfills": ["es-module-shims"]
+      },
+      "configurations": {
+        "production": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "500kb",
+              "maximumError": "1mb"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "4kb",
+              "maximumError": "8kb"
+            }
+          ],
+          "outputHashing": "all"
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true
+        }
+      }
+    },
+    "serve-original": {
+      "continuous": true,
+      "executor": "@angular/build:dev-server",
+      "defaultConfiguration": "development",
+      "options": {
+        "port": 4200
+      },
+      "configurations": {
+        "production": {
+          "buildTarget": "angular-host:esbuild:production"
+        },
+        "development": {
+          "buildTarget": "angular-host:esbuild:development"
+        }
+      }
+    },
+    "atlas:config": {
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/.atlas"],
+      "options": {
+        "command": "atlas compile-config angular-host"
+      }
+    },
+    "atlas:publish": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "dependsOn": ["build", "atlas:config"],
+      "options": {
+        "command": "atlas publish angular-host --from-build-output"
+      }
+    },
+    "atlas:bootstrap": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["atlas:config"],
+      "outputs": ["{projectRoot}/dist/bootstrap"],
+      "options": {
+        "command": "atlas build-bootstrap angular-host --skip-compile"
+      }
+    },
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "atlas dev angular-host",
+        "forwardAllArgs": true
+      }
+    },
+    "angular-host": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "nx run angular-host:dev",
+        "forwardAllArgs": true
+      }
+    }
+  }
+}

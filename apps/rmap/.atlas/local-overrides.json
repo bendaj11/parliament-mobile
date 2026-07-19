@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "1",
+  "hostId": "63f23aaa-ad0a-4a6a-ad2d-0feb6354ee8d",
+  "overrides": [
+    {
+      "appId": "26c17794-f347-4a68-8cd3-9f2a4265e6ba",
+      "manifest": {
+        "schemaVersion": "1",
+        "kind": "app",
+        "id": "26c17794-f347-4a68-8cd3-9f2a4265e6ba",
+        "name": "Rmap",
+        "version": "0.0.0",
+        "buildId": "0.0.0-local",
+        "channel": "local",
+        "framework": "react",
+        "isolation": "scoped",
+        "remoteEntryUrl": "http://localhost:4202/remoteEntry.json",
+        "exposes": {
+          "entry": "./entry"
+        },
+        "requiredHostSdkVersion": "^0.1.0",
+        "supportedHosts": [
+          "7ee210f9-dacd-4aac-939e-237032d44740",
+          "63f23aaa-ad0a-4a6a-ad2d-0feb6354ee8d"
+        ],
+        "placements": [
+          {
+            "id": "7ee210f9-dacd-4aac-939e-237032d44740-rmap-route",
+            "kind": "route",
+            "hostId": "7ee210f9-dacd-4aac-939e-237032d44740",
+            "route": {
+              "basePath": "/rmap",
+              "title": "Rmap",
+              "nav": {
+                "label": "Rmap",
+                "visible": true
+              }
+            }
+          },
+          {
+            "id": "63f23aaa-ad0a-4a6a-ad2d-0feb6354ee8d-rmap-route",
+            "kind": "route",
+            "hostId": "63f23aaa-ad0a-4a6a-ad2d-0feb6354ee8d",
+            "route": {
+              "basePath": "/rmap",
+              "title": "Rmap",
+              "nav": {
+                "label": "Rmap",
+                "visible": true
+              }
+            }
+          }
+        ],
+        "createdAt": "2026-07-15T11:51:30.795Z"
+      },
+      "reason": "local"
+    }
+  ],
+  "generatedAt": "2026-07-15T11:51:30.797Z"
+}

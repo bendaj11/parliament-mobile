@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "1",
+  "kind": "host",
+  "id": "63f23aaa-ad0a-4a6a-ad2d-0feb6354ee8d",
+  "name": "React Host",
+  "version": "0.0.0",
+  "buildId": "local",
+  "channel": "local",
+  "framework": "react",
+  "remoteEntryUrl": "http://localhost:4300/remoteEntry.json",
+  "exposes": {
+    "entry": "./host"
+  },
+  "requiredLoaderApiVersion": "^1.0.0",
+  "createdAt": "2026-07-15T11:50:53.706Z"
+}
