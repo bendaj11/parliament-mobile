@@ -1,0 +1,287 @@
+name: Atlas CI/CD
+
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches:
+      - master
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: atlas-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CI: 'true'
+  NODE_VERSION: '22'
+  NX_DAEMON: 'false'
+
+jobs:
+  validate:
+    name: Validate affected Atlas projects
+    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          filter: tree:0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Set Nx comparison SHAs
+        uses: nrwl/nx-set-shas@afb73a62d26e41464e9254689e1fd6122ee683c1 # v5.0.1
+        with:
+          main-branch-name: master
+
+      - name: Check Nx project references
+        run: npx nx sync:check
+
+      - name: Validate affected Atlas projects
+        run: >-
+          npx nx affected
+          -t lint test typecheck build
+          --outputStyle=static
+
+  publish:
+    name: Publish and deploy affected Atlas projects
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' &&
+      (github.ref_name == github.event.repository.default_branch || github.ref_type == 'tag'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    concurrency:
+      group: atlas-production
+      cancel-in-progress: false
+    env:
+      ATLAS_STORAGE: s3
+      ATLAS_S3_BUCKET: ${{ vars.ATLAS_S3_BUCKET }}
+      ATLAS_STORAGE_API_URL: ${{ vars.ATLAS_STORAGE_API_URL }}
+      ATLAS_STORAGE_KEY_PREFIX: ${{ vars.ATLAS_STORAGE_KEY_PREFIX }}
+      ATLAS_S3_REGION: ${{ vars.ATLAS_S3_REGION }}
+      ATLAS_S3_FORCE_PATH_STYLE: ${{ vars.ATLAS_S3_FORCE_PATH_STYLE }}
+      ATLAS_REGISTRY_URL: ${{ vars.ATLAS_REGISTRY_URL }}
+      ATLAS_RUNTIME_URLS: ${{ vars.ATLAS_RUNTIME_URLS }}
+      ATLAS_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      ATLAS_REQUIRE_PUBLICATION: 'true'
+      ATLAS_STORAGE_ACCESS_KEY_ID: ${{ secrets.ATLAS_STORAGE_ACCESS_KEY_ID }}
+      ATLAS_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.ATLAS_STORAGE_SECRET_ACCESS_KEY }}
+      DOCKERHUB_REACT_HOST_IMAGE: ${{ vars.DOCKERHUB_REACT_HOST_IMAGE }}
+      DOCKERHUB_ANGULAR_HOST_IMAGE: ${{ vars.DOCKERHUB_ANGULAR_HOST_IMAGE }}
+      RENDER_REACT_HOST_SERVICE_ID: ${{ vars.RENDER_REACT_HOST_SERVICE_ID }}
+      RENDER_ANGULAR_HOST_SERVICE_ID: ${{ vars.RENDER_ANGULAR_HOST_SERVICE_ID }}
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          filter: tree:0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Set Nx comparison SHAs
+        uses: nrwl/nx-set-shas@afb73a62d26e41464e9254689e1fd6122ee683c1 # v5.0.1
+        with:
+          main-branch-name: master
+
+      - name: Find affected Atlas projects
+        id: affected
+        shell: bash
+        run: |
+          projects_json=$(npx nx show projects --affected --with-target atlas:publish --json)
+          hosts_json=$(npx nx show projects --affected --with-target atlas:bootstrap --json)
+          projects=$(node -e '
+            const projects = JSON.parse(process.argv[1]);
+            process.stdout.write(projects.sort().join(","));
+          ' "$projects_json")
+          hosts=$(node -e '
+            const projects = JSON.parse(process.argv[1]);
+            process.stdout.write(projects.sort().join(","));
+          ' "$hosts_json")
+          apps=$(node -e '
+            const projects = JSON.parse(process.argv[1]);
+            const hosts = new Set(JSON.parse(process.argv[2]));
+            process.stdout.write(projects.filter((project) => !hosts.has(project)).sort().join(","));
+          ' "$projects_json" "$hosts_json")
+          echo "projects=${projects}" >> "$GITHUB_OUTPUT"
+          echo "apps=${apps}" >> "$GITHUB_OUTPUT"
+          echo "hosts=${hosts}" >> "$GITHUB_OUTPUT"
+          echo "Affected Atlas projects: ${projects:-none}"
+          echo "Affected Atlas apps: ${apps:-none}"
+          echo "Affected Atlas hosts: ${hosts:-none}"
+
+      - name: Check Nx project references
+        if: steps.affected.outputs.projects != ''
+        run: npx nx sync:check
+
+      - name: Validate affected Atlas projects
+        if: steps.affected.outputs.projects != ''
+        run: >-
+          npx nx affected
+          -t lint test typecheck build
+          --outputStyle=static
+
+      - name: Validate Atlas deployment configuration
+        if: steps.affected.outputs.projects != ''
+        shell: bash
+        run: |
+          required=(
+            ATLAS_S3_BUCKET
+            ATLAS_S3_REGION
+            ATLAS_REGISTRY_URL
+            ATLAS_RUNTIME_URLS
+            ATLAS_STORAGE_ACCESS_KEY_ID
+            ATLAS_STORAGE_SECRET_ACCESS_KEY
+          )
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Missing required Atlas deployment value: ${name}"
+              exit 1
+            fi
+          done
+
+      - name: Validate host deployment configuration
+        if: steps.affected.outputs.hosts != ''
+        env:
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        shell: bash
+        run: |
+          required=(DOCKERHUB_USERNAME DOCKERHUB_TOKEN RENDER_API_KEY)
+          if [[ ",${{ steps.affected.outputs.hosts }}," == *",react-host,"* ]]; then
+            required+=(DOCKERHUB_REACT_HOST_IMAGE RENDER_REACT_HOST_SERVICE_ID)
+          fi
+          if [[ ",${{ steps.affected.outputs.hosts }}," == *",angular-host,"* ]]; then
+            required+=(DOCKERHUB_ANGULAR_HOST_IMAGE RENDER_ANGULAR_HOST_SERVICE_ID)
+          fi
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Missing required host deployment value: ${name}"
+              exit 1
+            fi
+          done
+
+      - name: Publish affected Atlas apps and hosts
+        if: steps.affected.outputs.projects != ''
+        run: >-
+          npx nx affected
+          -t atlas:publish
+          --outputStyle=static
+
+      - name: Build affected host bootstraps
+        if: steps.affected.outputs.hosts != ''
+        run: >-
+          npx nx affected
+          -t atlas:bootstrap
+          --outputStyle=static
+
+      - name: Read host bootstrap digests
+        id: bootstrap
+        if: steps.affected.outputs.hosts != ''
+        shell: bash
+        run: |
+          read_digest() {
+            node -e '
+              const metadata = require(`./${process.argv[1]}/dist/bootstrap/atlas.bootstrap.json`);
+              process.stdout.write(metadata.digest.replace(/^sha256:/, ""));
+            ' "$1"
+          }
+          if [[ ",${{ steps.affected.outputs.hosts }}," == *",react-host,"* ]]; then
+            echo "react=$(read_digest apps/react-host)" >> "$GITHUB_OUTPUT"
+          fi
+          if [[ ",${{ steps.affected.outputs.hosts }}," == *",angular-host,"* ]]; then
+            echo "angular=$(read_digest apps/angular-host)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Log in to Docker Hub
+        if: steps.affected.outputs.hosts != ''
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        if: steps.affected.outputs.hosts != ''
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Build and push React host image
+        if: contains(format(',{0},', steps.affected.outputs.hosts), ',react-host,')
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          context: apps/react-host
+          file: apps/react-host/Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKERHUB_REACT_HOST_IMAGE }}:${{ steps.bootstrap.outputs.react }}
+            ${{ env.DOCKERHUB_REACT_HOST_IMAGE }}:latest
+          cache-from: type=gha,scope=react-host
+          cache-to: type=gha,mode=max,scope=react-host
+          provenance: true
+          sbom: true
+
+      - name: Build and push Angular host image
+        if: contains(format(',{0},', steps.affected.outputs.hosts), ',angular-host,')
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          context: apps/angular-host
+          file: apps/angular-host/Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKERHUB_ANGULAR_HOST_IMAGE }}:${{ steps.bootstrap.outputs.angular }}
+            ${{ env.DOCKERHUB_ANGULAR_HOST_IMAGE }}:latest
+          cache-from: type=gha,scope=angular-host
+          cache-to: type=gha,mode=max,scope=angular-host
+          provenance: true
+          sbom: true
+
+      - name: Deploy affected hosts to Render
+        if: steps.affected.outputs.hosts != ''
+        shell: bash
+        run: |
+          pids=()
+          if [[ ",${{ steps.affected.outputs.hosts }}," == *",react-host,"* ]]; then
+            node tools/ci/deploy-render.mjs \
+              "$RENDER_REACT_HOST_SERVICE_ID" \
+              "docker.io/$DOCKERHUB_REACT_HOST_IMAGE:${{ steps.bootstrap.outputs.react }}" &
+            pids+=("$!")
+          fi
+          if [[ ",${{ steps.affected.outputs.hosts }}," == *",angular-host,"* ]]; then
+            node tools/ci/deploy-render.mjs \
+              "$RENDER_ANGULAR_HOST_SERVICE_ID" \
+              "docker.io/$DOCKERHUB_ANGULAR_HOST_IMAGE:${{ steps.bootstrap.outputs.angular }}" &
+            pids+=("$!")
+          fi
+          for pid in "${pids[@]}"; do
+            wait "$pid"
+          done
+
+      - name: Verify both hosts
+        if: steps.affected.outputs.projects != ''
+        run: npx atlas verify

@@ -4,7 +4,7 @@
   "projectType": "application",
   "prefix": "app",
   "sourceRoot": "apps/login/src",
-  "tags": [],
+  "tags": ["atlas"],
   "targets": {
     "build": {
       "executor": "@angular-architects/native-federation:build",
@@ -114,9 +114,10 @@
     "atlas:publish": {
       "executor": "nx:run-commands",
       "cache": false,
-      "dependsOn": ["build", "atlas:config"],
+      "dependsOn": ["build"],
       "options": {
-        "command": "atlas publish login --from-build-output"
+        "command": "atlas publish login --from-build-output",
+        "forwardAllArgs": true
       }
     },
     "dev": {

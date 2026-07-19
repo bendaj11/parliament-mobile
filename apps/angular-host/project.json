@@ -4,7 +4,7 @@
   "projectType": "application",
   "prefix": "app",
   "sourceRoot": "apps/angular-host/src",
-  "tags": [],
+  "tags": ["atlas"],
   "targets": {
     "build": {
       "executor": "@angular-architects/native-federation:build",
@@ -114,9 +114,10 @@
     "atlas:publish": {
       "executor": "nx:run-commands",
       "cache": false,
-      "dependsOn": ["build", "atlas:config"],
+      "dependsOn": ["build"],
       "options": {
-        "command": "atlas publish angular-host --from-build-output"
+        "command": "atlas publish angular-host --from-build-output",
+        "forwardAllArgs": true
       }
     },
     "atlas:bootstrap": {
@@ -124,7 +125,8 @@
       "dependsOn": ["atlas:config"],
       "outputs": ["{projectRoot}/dist/bootstrap"],
       "options": {
-        "command": "atlas build-bootstrap angular-host --skip-compile"
+        "command": "atlas build-bootstrap angular-host --skip-compile",
+        "forwardAllArgs": true
       }
     },
     "dev": {

@@ -7,5 +7,5 @@ export default {
   id: '63f23aaa-ad0a-4a6a-ad2d-0feb6354ee8d',
   name: 'React Host',
   framework: 'react',
-  allowOverrides: true,
+  allowCustomOverrides: true,
 } satisfies AtlasHostConfig;
