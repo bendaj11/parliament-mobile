@@ -13,6 +13,14 @@ publication through the generated `atlas:publish` target and identifies hosts
 through their generated `atlas:bootstrap` target. All generated Atlas projects
 also carry the standard `atlas` tag.
 
+On a pull request from this repository, GitHub Actions validates the affected
+projects and publishes their Atlas PR preview artifacts using the pull
+request's actual head SHA. PR publication updates only the shared Atlas
+registry; it does not build host images or deploy to Render. Pull requests from
+forks are validation-only because GitHub does not expose publication secrets to
+untrusted fork code. Closing or merging a pull request removes its preview
+artifacts from the registry.
+
 On `master` or a `v*` tag, the delivery order is:
 
 1. Validate only affected Atlas projects.
