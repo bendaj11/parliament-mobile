@@ -111,12 +111,19 @@ jobs:
         with:
           main-branch-name: master
 
-      - name: Find affected Atlas projects
+      - name: Select Atlas projects
         id: affected
+        env:
+          DEPLOY_ALL: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && contains(github.event.head_commit.message, '[deploy-all]') }}
         shell: bash
         run: |
-          projects_json=$(npx nx show projects --affected --with-target atlas:publish --json)
-          hosts_json=$(npx nx show projects --affected --with-target atlas:bootstrap --json)
+          if [[ "$DEPLOY_ALL" == 'true' ]]; then
+            projects_json=$(npx nx show projects --with-target atlas:publish --json)
+            hosts_json=$(npx nx show projects --with-target atlas:bootstrap --json)
+          else
+            projects_json=$(npx nx show projects --affected --with-target atlas:publish --json)
+            hosts_json=$(npx nx show projects --affected --with-target atlas:bootstrap --json)
+          fi
           projects=$(node -e '
             const projects = JSON.parse(process.argv[1]);
             process.stdout.write(projects.sort().join(","));
@@ -133,20 +140,27 @@ jobs:
           echo "projects=${projects}" >> "$GITHUB_OUTPUT"
           echo "apps=${apps}" >> "$GITHUB_OUTPUT"
           echo "hosts=${hosts}" >> "$GITHUB_OUTPUT"
-          echo "Affected Atlas projects: ${projects:-none}"
-          echo "Affected Atlas apps: ${apps:-none}"
-          echo "Affected Atlas hosts: ${hosts:-none}"
+          echo "deploy_all=${DEPLOY_ALL}" >> "$GITHUB_OUTPUT"
+          echo "Atlas selection mode: $([[ "$DEPLOY_ALL" == 'true' ]] && echo all || echo affected)"
+          echo "Selected Atlas projects: ${projects:-none}"
+          echo "Selected Atlas apps: ${apps:-none}"
+          echo "Selected Atlas hosts: ${hosts:-none}"
 
       - name: Check Nx project references
         if: steps.affected.outputs.projects != ''
         run: npx nx sync:check
 
-      - name: Validate affected Atlas projects
+      - name: Validate selected Atlas projects
         if: steps.affected.outputs.projects != ''
-        run: >-
-          npx nx affected
-          -t lint test build
-          --outputStyle=static
+        env:
+          PROJECTS: ${{ steps.affected.outputs.projects }}
+        shell: bash
+        run: |
+          if [[ "${{ steps.affected.outputs.deploy_all }}" == 'true' ]]; then
+            npx nx run-many -t lint test build --projects="$PROJECTS" --outputStyle=static
+          else
+            npx nx affected -t lint test build --outputStyle=static
+          fi
 
       - name: Validate Atlas deployment configuration
         if: steps.affected.outputs.projects != ''
@@ -188,19 +202,29 @@ jobs:
             fi
           done
 
-      - name: Publish affected Atlas apps and hosts
+      - name: Publish selected Atlas apps and hosts
         if: steps.affected.outputs.projects != ''
-        run: >-
-          npx nx affected
-          -t atlas:publish
-          --outputStyle=static
+        env:
+          PROJECTS: ${{ steps.affected.outputs.projects }}
+        shell: bash
+        run: |
+          if [[ "${{ steps.affected.outputs.deploy_all }}" == 'true' ]]; then
+            npx nx run-many -t atlas:publish --projects="$PROJECTS" --outputStyle=static
+          else
+            npx nx affected -t atlas:publish --outputStyle=static
+          fi
 
-      - name: Build affected host bootstraps
+      - name: Build selected host bootstraps
         if: steps.affected.outputs.hosts != ''
-        run: >-
-          npx nx affected
-          -t atlas:bootstrap
-          --outputStyle=static
+        env:
+          HOSTS: ${{ steps.affected.outputs.hosts }}
+        shell: bash
+        run: |
+          if [[ "${{ steps.affected.outputs.deploy_all }}" == 'true' ]]; then
+            npx nx run-many -t atlas:bootstrap --projects="$HOSTS" --outputStyle=static
+          else
+            npx nx affected -t atlas:bootstrap --outputStyle=static
+          fi
 
       - name: Read host bootstrap digests
         id: bootstrap

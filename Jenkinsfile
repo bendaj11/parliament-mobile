@@ -68,18 +68,23 @@ pipeline {
             script: 'git log -1 --format=%s',
             returnStdout: true
           ).trim()
+          env.ATLAS_DEPLOY_ALL = (
+            env.BRANCH_NAME == env.ATLAS_DEFAULT_BRANCH &&
+            env.ATLAS_GIT_COMMIT_TITLE.contains('[deploy-all]')
+          ).toString()
 
-          env.ATLAS_PROJECTS_AFFECTED = findAffectedProjects('atlas:publish')
-          env.ATLAS_HOSTS_AFFECTED = findAffectedProjects('atlas:bootstrap')
+          env.ATLAS_PROJECTS_AFFECTED = findProjects('atlas:publish', env.ATLAS_DEPLOY_ALL != 'true')
+          env.ATLAS_HOSTS_AFFECTED = findProjects('atlas:bootstrap', env.ATLAS_DEPLOY_ALL != 'true')
           env.ATLAS_APPS_AFFECTED = commaSeparatedDifference(
             env.ATLAS_PROJECTS_AFFECTED,
             env.ATLAS_HOSTS_AFFECTED
           )
 
           echo "Nx affected range: ${env.NX_BASE}..${env.NX_HEAD}"
-          echo "Affected Atlas projects: ${env.ATLAS_PROJECTS_AFFECTED ?: 'none'}"
-          echo "Affected Atlas apps: ${env.ATLAS_APPS_AFFECTED ?: 'none'}"
-          echo "Affected Atlas hosts: ${env.ATLAS_HOSTS_AFFECTED ?: 'none'}"
+          echo "Atlas selection mode: ${env.ATLAS_DEPLOY_ALL == 'true' ? 'all' : 'affected'}"
+          echo "Selected Atlas projects: ${env.ATLAS_PROJECTS_AFFECTED ?: 'none'}"
+          echo "Selected Atlas apps: ${env.ATLAS_APPS_AFFECTED ?: 'none'}"
+          echo "Selected Atlas hosts: ${env.ATLAS_HOSTS_AFFECTED ?: 'none'}"
         }
       }
     }
@@ -93,9 +98,16 @@ pipeline {
       steps {
         sh 'npx nx sync:check'
         sh '''
-          npx nx affected \
-            -t lint test build \
-            --outputStyle=static
+          if [ "$ATLAS_DEPLOY_ALL" = "true" ]; then
+            npx nx run-many \
+              -t lint test build \
+              --projects="$ATLAS_PROJECTS_AFFECTED" \
+              --outputStyle=static
+          else
+            npx nx affected \
+              -t lint test build \
+              --outputStyle=static
+          fi
         '''
       }
     }
@@ -132,9 +144,16 @@ pipeline {
               export CI_COMMIT_TAG="$TAG_NAME"
             fi
 
-            npx nx affected \
-              -t atlas:publish \
-              --outputStyle=static
+            if [ "$ATLAS_DEPLOY_ALL" = "true" ]; then
+              npx nx run-many \
+                -t atlas:publish \
+                --projects="$ATLAS_PROJECTS_AFFECTED" \
+                --outputStyle=static
+            else
+              npx nx affected \
+                -t atlas:publish \
+                --outputStyle=static
+            fi
           '''
         }
       }
@@ -177,9 +196,16 @@ pipeline {
               fi
             done
 
-            npx nx affected \
-              -t atlas:bootstrap \
-              --outputStyle=static
+            if [ "$ATLAS_DEPLOY_ALL" = "true" ]; then
+              npx nx run-many \
+                -t atlas:bootstrap \
+                --projects="$ATLAS_HOSTS_AFFECTED" \
+                --outputStyle=static
+            else
+              npx nx affected \
+                -t atlas:bootstrap \
+                --outputStyle=static
+            fi
 
             read_digest() {
               node -e '
@@ -278,14 +304,13 @@ pipeline {
   }
 }
 
-String findAffectedProjects(String targetName) {
+String findProjects(String targetName, boolean affectedOnly) {
+  def affectedArgument = affectedOnly ? '--affected' : ''
   return sh(
     script: """
       projects_json=\$(
-        npx nx show projects \\
-          --affected \\
-          --with-target '${targetName}' \\
-          --json
+        npx nx show projects ${affectedArgument} \\
+          --with-target '${targetName}' --json
       )
       node -e '
         const projects = JSON.parse(process.argv[1]);
