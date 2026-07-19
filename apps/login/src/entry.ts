@@ -10,6 +10,7 @@ import {
 } from '@atlas/sdk/angular';
 import { routes } from './app/routes';
 import { AppComponent } from './app/app.component';
+import { provideIonicAngular } from '@ionic/angular/standalone';
 
 export default defineApp(async ({ container, sdk, context }) => {
   const element = document.createElement('atlas-login-root');
@@ -22,6 +23,7 @@ export default defineApp(async ({ container, sdk, context }) => {
       provideRouter(routes),
       provideAtlasAppContext(context),
       provideAtlasSdk(sdk),
+      provideIonicAngular({ mode: 'ios' }),
       { provide: LocationStrategy, useValue: locationStrategy },
     ],
   });

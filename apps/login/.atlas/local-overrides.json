@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1",
-  "hostId": "63f23aaa-ad0a-4a6a-ad2d-0feb6354ee8d",
+  "hostId": "7ee210f9-dacd-4aac-939e-237032d44740",
   "overrides": [
     {
       "appId": "b793d518-ee46-43cb-a57c-e0bcf85043c9",
@@ -10,7 +10,7 @@
         "id": "b793d518-ee46-43cb-a57c-e0bcf85043c9",
         "name": "Login",
         "version": "0.0.0",
-        "buildId": "0.0.0-e1f779458c05",
+        "buildId": "8539a4498fb0",
         "channel": "local",
         "framework": "angular",
         "isolation": "scoped",
@@ -51,15 +51,18 @@
             }
           }
         ],
-        "createdAt": "2026-07-15T11:50:39.254Z",
+        "createdAt": "2026-07-19T20:10:07.394Z",
         "styles": [
           {
             "href": "http://localhost:4201/styles.css"
           }
-        ]
+        ],
+        "gitSha": "0b98c72a15a6f65a050f7ece3dc2915a57ce5cc8",
+        "gitBranch": "feat/add-home-card",
+        "gitCommitTitle": "chore: deploy all [deploy-all]"
       },
       "reason": "local"
     }
   ],
-  "generatedAt": "2026-07-15T11:50:39.257Z"
+  "generatedAt": "2026-07-19T20:10:07.396Z"
 }
