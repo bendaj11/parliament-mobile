@@ -68,6 +68,7 @@ pipeline {
             script: 'git log -1 --format=%s',
             returnStdout: true
           ).trim()
+          env.ATLAS_VERSION = env.TAG_NAME ? '' : "0.${env.BUILD_NUMBER}.0"
           env.ATLAS_DEPLOY_ALL = (
             env.BRANCH_NAME == env.ATLAS_DEFAULT_BRANCH &&
             env.ATLAS_GIT_COMMIT_TITLE.contains('[deploy-all]')
@@ -82,6 +83,9 @@ pipeline {
 
           echo "Nx affected range: ${env.NX_BASE}..${env.NX_HEAD}"
           echo "Atlas selection mode: ${env.ATLAS_DEPLOY_ALL == 'true' ? 'all' : 'affected'}"
+          if (env.ATLAS_VERSION) {
+            echo "Atlas publication version: ${env.ATLAS_VERSION}"
+          }
           echo "Selected Atlas projects: ${env.ATLAS_PROJECTS_AFFECTED ?: 'none'}"
           echo "Selected Atlas apps: ${env.ATLAS_APPS_AFFECTED ?: 'none'}"
           echo "Selected Atlas hosts: ${env.ATLAS_HOSTS_AFFECTED ?: 'none'}"
@@ -144,15 +148,22 @@ pipeline {
               export CI_COMMIT_TAG="$TAG_NAME"
             fi
 
+            version_arg=""
+            if [ -n "$ATLAS_VERSION" ]; then
+              version_arg="--args=--version=$ATLAS_VERSION"
+            fi
+
             if [ "$ATLAS_DEPLOY_ALL" = "true" ]; then
               npx nx run-many \
                 -t atlas:publish \
                 --projects="$ATLAS_PROJECTS_AFFECTED" \
-                --outputStyle=static
+                --outputStyle=static \
+                $version_arg
             else
               npx nx affected \
                 -t atlas:publish \
-                --outputStyle=static
+                --outputStyle=static \
+                $version_arg
             fi
           '''
         }

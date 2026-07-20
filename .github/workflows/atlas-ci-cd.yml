@@ -141,6 +141,11 @@ jobs:
           echo "apps=${apps}" >> "$GITHUB_OUTPUT"
           echo "hosts=${hosts}" >> "$GITHUB_OUTPUT"
           echo "deploy_all=${DEPLOY_ALL}" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF_TYPE" != 'tag' ]]; then
+            atlas_version="0.${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
+            echo "atlas_version=${atlas_version}" >> "$GITHUB_OUTPUT"
+            echo "Atlas publication version: ${atlas_version}"
+          fi
           echo "Atlas selection mode: $([[ "$DEPLOY_ALL" == 'true' ]] && echo all || echo affected)"
           echo "Selected Atlas projects: ${projects:-none}"
           echo "Selected Atlas apps: ${apps:-none}"
@@ -205,13 +210,18 @@ jobs:
       - name: Publish selected Atlas apps and hosts
         if: steps.affected.outputs.projects != ''
         env:
+          ATLAS_VERSION: ${{ steps.affected.outputs.atlas_version }}
           PROJECTS: ${{ steps.affected.outputs.projects }}
         shell: bash
         run: |
+          version_args=()
+          if [[ -n "$ATLAS_VERSION" ]]; then
+            version_args+=(--args="--version=$ATLAS_VERSION")
+          fi
           if [[ "${{ steps.affected.outputs.deploy_all }}" == 'true' ]]; then
-            npx nx run-many -t atlas:publish --projects="$PROJECTS" --outputStyle=static
+            npx nx run-many -t atlas:publish --projects="$PROJECTS" --outputStyle=static "${version_args[@]}"
           else
-            npx nx affected -t atlas:publish --outputStyle=static
+            npx nx affected -t atlas:publish --outputStyle=static "${version_args[@]}"
           fi
 
       - name: Build selected host bootstraps

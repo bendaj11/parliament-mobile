@@ -16,13 +16,16 @@ also carry the standard `atlas` tag.
 On `master` or a `v*` tag, the delivery order is:
 
 1. Validate only affected Atlas projects.
-2. Atlas-publish affected apps and hosts concurrently; Atlas's storage lease
+2. Assign a unique CI publication version for branch builds; tagged builds use
+   the version from the Git tag.
+3. Atlas-publish affected apps and hosts concurrently from the build output
+   produced during validation; Atlas's storage lease
    safely serializes registry mutation.
-3. Generate the bootstrap for each affected host.
-4. Build affected host images and push both `:<bootstrap-digest>` and `:latest`
+4. Generate the bootstrap for each affected host.
+5. Build affected host images and push both `:<bootstrap-digest>` and `:latest`
    tags.
-5. Deploy the immutable bootstrap-digest tag to the matching Render service.
-6. Wait for every Render deploy to become `live`, then run `atlas verify`.
+6. Deploy the immutable bootstrap-digest tag to the matching Render service.
+7. Wait for every Render deploy to become `live`, then run `atlas verify`.
 
 ## GitHub production environment
 
@@ -96,6 +99,12 @@ pushed. Production runs are serialized, while stale pull-request runs are
 canceled. GitHub Actions are pinned to immutable commit SHAs and the workflow
 token is read-only. Docker Hub uses a token rather than a password, and Render
 deploys an immutable bootstrap-digest tag rather than mutable `latest`.
+
+Atlas publications are immutable. Branch builds therefore use a CI-derived
+semantic version (`0.<run-number>.<run-attempt>` in GitHub Actions and
+`0.<build-number>.0` in Jenkins) instead of the workspace's placeholder
+`0.0.0`. GitHub reruns receive a new patch version. Release tags retain Atlas's
+native tag-version inference.
 
 For cross-run Nx artifact caching, connect Nx Cloud. The current setup does not
 require an Nx Cloud account.

@@ -114,7 +114,6 @@
     "atlas:publish": {
       "executor": "nx:run-commands",
       "cache": false,
-      "dependsOn": ["build"],
       "options": {
         "command": "atlas publish login --from-build-output",
         "forwardAllArgs": true
